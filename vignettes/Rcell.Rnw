@@ -1,0 +1,324 @@
+
+\documentclass{article}
+
+\usepackage{url}
+\usepackage{natbib}
+\usepackage{graphics}
+\usepackage{amsmath}
+\usepackage{indentfirst}
+\usepackage[utf8]{inputenc}
+\usepackage{fullpage}
+
+
+% \VignetteIndexEntry{Getting-Started-with-Rcell}
+
+\begin{document}
+
+\SweaveOpts{pdf = TRUE}
+\SweaveOpts{prefix.string=fig/Rcell}
+<<include=FALSE,echo=FALSE>>=
+  if(!file.exists("fig")) dir.create("fig")  
+@
+\setkeys{Gin}{width=0.5\textwidth}
+
+<<foo,include=FALSE,echo=FALSE>>=
+options(keep.source = TRUE, width = 100)
+foo <- packageDescription("Rcell")
+@
+
+\title{Getting Started with Rcell (Version \Sexpr{foo$Version})}
+\author{Alan Bush}
+\maketitle
+
+\section{Introduction}
+
+\verb@Rcell@ is a package design to load, manipulate and visualize datasets generated with \verb@Cell-ID@ (\cite{cpmcb2008}) in \verb@R@. These datasets contain about 70 different variables (columns) and can contain thousands of registers (rows). An analysis of the dataset usually includes filtering it for spurious or badly found cells, creating new (normalized) variables from existing ones and creating plots and images to visualize the data. You can download the latest version of the package from CRAN (\verb@install.packages('Rcell')@). For a detail installation guide of all the software required for the analysis, go to \url{http://sourceforge.net/projects/cell-id/files}. To load the package open \emph{R} and type
+
+<<library>>=
+library(Rcell)
+@
+
+Note that installing and loading a package are two different things, and you have to load the package using \verb@library@ at the begging of every session even if you just installed it. 
+
+In this document I will guide you through a standard analysis of a dataset.
+
+\section{Load Cell-ID Data to R}
+
+\textbf{Cell-ID} creates a series of folders named ``Position\*'', in which one can find the ``out\_all'' file containing the dataset for the given position. \textbf{Cell-ID} also creates some other files containing information about the image files used for each channel and time frame, and the parameters with which the program was run. 
+The \verb@load.cellID.data@ function can be used to load this data into \textbf{R}. This function searches for the ``Position'' folders in a specified directory. The default is the working directory, but this can be modified with the \emph{path} argument. If you have your Cell-ID analyzed images in the directory ``C:\verb'\'microscopy-data\verb'\'my-experiment'' you can first set it as your working directory, and then execute \verb@load.cellID.data@ 
+
+<<eval=FALSE,echo=TRUE>>=
+setwd("C:\\microscopy-data\\my-experiment")
+X<-load.cellID.data()
+@
+
+Note the use of the double backslash (\verb@\\@) when setting the working directory. This is required because the backslash (\verb@\@) is a reserved character in \textbf{R}. You can also use a single forward-slash (\verb@/@) instead of the double backslash, as in Unix paths. 
+\verb@load.cellID.data@ returns a object of class \verb@cell.data@ that has to be assign (\verb@<-@) to a variable. Throughout this tutorial will call this object \verb@X@.
+If you don't have a experiment to analyze you can still go through the tutorial with the example dataset (\cite{acl2005}) included in the package. To load this dataset just type
+<<echo=TRUE,eval=FALSE>>=
+data(ACL394)
+@ 
+
+<<include=FALSE,echo=FALSE>>=
+data(ACL394data)
+X$images$path<-factor(system.file('img', package='Rcell'))
+X$data$QC<-rep(TRUE,times=dim(X$data)[1])
+X$data<-subset(X$data,select=-c(time.min,f.total.y,n.tot,AF.nM))
+X$QC.history<-list()
+X$subset.history<-list()
+X$transform<-list()
+X$variables$transformed<-NULL
+X$variables$merged<-NULL
+X$variables$merged.by<-NULL
+X$variables$as.factor<-c("pos","cellID","ucid")
+X$variables$all<-setdiff(X$variables$all,c("time.min","f.total.y","n.tot","AF.nM"))
+@
+
+
+This function loads the example dataset into the \verb@X@ object, and replaces the previous content of \verb@X@ if it existed.
+
+\section{Inspect the Data}
+
+A quick way to look at the content of your dataset is to use the \verb@summary@ function.
+<<echo=TRUE>>=
+summary(X)
+@
+This function returns a brief description of the \verb@cell.data@ object, including the path from where it was loaded, the positions and time frames, the available variables and channels. You can see that the example dataset is a time course and has the positions 1-3,8-10,15-17,22-24,29-31. (Some positions where deleted from the original experiment to save space). To learn more about the experiment you can read the documentation of the dataset.
+<<eval=FALSE,echo=TRUE>>=
+help(ACL394)
+@
+For a description of the variables and features calculated by Cell-ID, read the following vignette
+<<eval=FALSE,echo=TRUE>>=
+vignette("Cell-ID-vars")
+@
+
+Once loaded to \emph{R}, we can use its plotting features to visualize our data (\cite{wickham2009}).  For example to plot the total YFP fluorescence of position one (\verb@pos==1@), type in the following command (Figure~\ref{fig:f01}).
+
+<<fig01,include=TRUE>>=
+cplot(X,f.tot.y~t.frame,subset=pos==1)
+@
+
+\setkeys{Gin}{width=0.4\textwidth}
+\begin{figure}
+\begin{center}
+<<fig=TRUE,echo=FALSE,width=5,height=5>>=
+print(
+<<fig01>>
+)
+@
+\caption{f.tot.y vs t.frame for pos==1}
+\label{fig:f01}
+\end{center}
+\end{figure}
+
+\verb@cplot@ function is used to plot your \underline{c}ell data. As all the functions of the Rcell package, its first argument is a \verb@cell.data@ object as returned by \verb@load.cellID.data@. The second argument specifies what variables should be plotted in the ``x'' and ``y'' axis. It uses a formula notation, in the form \verb@y~x@. The \verb@subset@ argument is used to subset or filter the dataset before plotting, in this case we specify that only the registers in which the \emph{pos} variable equals 1 should be included. Note the use of the ``is equal to'' operator (\verb@==@). A common mistake is to use the assignation operator (\verb@=@) in logical conditions of the \verb@subset@ argument. 
+
+To see all the positions at a glance we can use faceting, specifying a formula to the \verb@facets@ argument of \verb@cplot@ (Figure~\ref{fig:f02}).
+
+<<fig02,include=TRUE>>=
+cplot(X,f.tot.y~t.frame,facets=~pos)
+@
+
+\setkeys{Gin}{width=1\textwidth}
+\begin{figure}
+\begin{center}
+<<fig=TRUE,echo=FALSE,width=12,height=6>>=
+print(
+cplot(X,f.tot.y~t.frame,facets=~pos)+ facet_wrap(~pos,ncol=5)
+)
+@
+\caption{f.tot.y vs t.frame faceted by position}
+\label{fig:f02}
+\end{center}
+\end{figure}
+\setkeys{Gin}{width=0.5\textwidth}
+
+
+\section{Adding Metadata and Creating New Variables}
+
+Once the data is loaded in \verb@R@ it is a good practice to add metadata to the dataset. By ``metadata'' I mean variables that describe the experiment, and are not calculated by Cell-ID. For example, in the ACL394 dataset positions 1-3 correspond to well 1, positions 8-10 to well 2, etc. Wells 1 to 5 were stimulated with $\alpha$-factor at concentrations 1.25, 2.5, 5, 10 and 20 nM respectively. To add this information to the dataset we can use the \verb@load.pdata@ function. This function searches for a file named ``pdata.txt'' in the working directory\footnote{You can change the working directory with \textbf{\texttt{setwd("C:/my-folder/")}}}. ``pdata.txt'' should be a tab delimited file with a description of each position as shown in Table~\ref{tab:t01}. You can create such file in Excel (Save As > Tab Delimited File). Make sure to create this file before proceedig with the example\footnote{If you loaded the example dataset with \textbf{\texttt{data(ACL394)}} you can obtain the same result with \textbf{\texttt{X<-merge(X,pdata)}}}. 
+
+
+<<echo=FALSE,results=tex>>=
+library(xtable)
+print(xtable(pdata, table.placement = "tbp",caption.placement = "top",caption="example pdata.txt file",label="tab:t01"), include.rownames=FALSE)
+@
+
+<<eval=FALSE,echo=TRUE>>=
+X<-load.pdata(X)
+@
+<<echo=FALSE,include=FALSE>>=
+X<-merge(X,pdata,by="pos")
+@
+
+Adding metadata makes the code easier to read, as you can subset and plot by biologically relevant variables instead of having to use (and remember!) each position.
+
+The \verb@transform@ function can be used to create new variables from the existing ones. For instance, we could create a variable of total fluorescence corrected for background fluoresce (i.e. fluorescence from pixels not associated with any cell).
+
+<<echo=TRUE>>=
+X<-transform(X,f.total.y=f.tot.y-f.bg.y*a.tot)
+@  
+
+We call this new variable \emph{f.total.y}. Note that \emph{f.bg.y} is the mode (most often value) fluorescence of background pixels, so we need to multiply it by the area of the cell \emph{a.tot}. 
+
+For more details on how to transform your dataset and create new variables see the ``transform'' vignette
+
+<<eval=FALSE,echo=TRUE>>=
+vignette('transform')
+@
+
+\section{Quality Control} 
+
+The datasets produced by Cell-ID normally contain spurious or badly found cells. This cells have to be removed from the dataset or marked to be ignored, as they add noise and complicate interpretation of the data. To this end the functions \verb@QC.filter@, \verb@QC.undo@ and \verb@QC.reset@ are provided. 
+\verb@QC.filter@ adds cumulative filters to the dataset, meaning that every time you call this function you make the resulting filter more stringent. Each filter adds on the previous one. All of Rcell functions by default ignore the registers that don't pass these filters. In this way you can ignore in your analysis the registers that correspond to spurious or badly found cells. The decision of which filters to apply is not a trivial one and will depend on your particular dataset. For example, if all your cells are approximately spherical you can apply a filter over \emph{fft.stat}, a measure of non-circularity (small \emph{fft.stat} indicates very circular boundaries). To define at what value of \emph{fft.stat} to do the cut we can take a look at an histogram of this variable (Figure~\ref{fig:f03}).
+
+<<fig03,include=TRUE>>=
+cplot(X,~fft.stat)
+@
+
+\setkeys{Gin}{width=0.4\textwidth}
+\begin{figure}
+\begin{center}
+<<fig=TRUE,echo=FALSE,width=4,height=4>>=
+print(
+<<fig03>>
+)
+@
+\caption{fft.stat histogram}
+\label{fig:f03}
+\end{center}
+\end{figure}
+
+Note that when only the right term of the formula is defined, \verb@cplot@ creates a histogram. From this histogram we can see that very few cells have \emph{fft.stat} larger than 0.5. We can see what these cells look like using the \verb@cimage@ function (Figure~\ref{fig:img4}). 
+ 
+<<img4,include=TRUE,eval=FALSE>>=
+cimage(X,channel="BF.out",subset=fft.stat>0.5&t.frame==11&pos%in%c(1,8,15,22,29))
+@
+
+<<include=FALSE,echo=FALSE,eval=TRUE>>= 
+if(require(EBImage,quietly=TRUE)){
+  writeImage(
+<<img4>>
+  ,'fig/Rcell-img4.jpg', quality=80)
+}
+@
+
+\setkeys{Gin}{width=0.2\textwidth}
+\begin{figure}
+\begin{center}
+\includegraphics[width=70pt]{fig/Rcell-img4.jpg}
+\caption{Cells with fft.stat > 0.5}
+\label{fig:img4}
+\end{center}
+\end{figure}
+
+For more details on \verb@cimage@ read the vignette.
+<<eval=FALSE,echo=TRUE>>=
+vignette('cimage')
+@
+
+You can see in Figure~\ref{fig:img4} that cells with \verb@fft.stat > 0.5@ are badly found cells that we want to eliminate from our dataset. The \verb@QC.filter@ function applies the filter and informs us how many registers were excluded by ALL the QC filters applied until now.
+
+<<echo=TRUE>>=
+X<-QC.filter(X,fft.stat<0.5)
+@
+
+Another useful way to filter a time courses experiment is by \emph{n.tot}, the total number of time frames in which a given cell appears. Spurious cells usually only appear in a single time frame. First we will use \verb@update_n.tot@ to update this variable, and then \verb@QC.filter@ to apply it.
+
+<<echo=TRUE>>=
+X<-update_n.tot(X)
+X<-QC.filter(X,n.tot==14)
+@
+
+If you are not sure on the filter to apply on \emph{n.tot} you can plot a histogram of this variable with \verb@cplot(X,~n.tot)@ .
+If you don't like a filter you just applied you can undo it with \verb@QC.undo(X)@, or you can reset all filters with \verb@QC.reset(X)@.
+
+\section{Plotting the data} 
+
+Using \textbf{Rcell} you can obtain complex plots with a single line of code. We can creating scatter plots and histograms with the following code (Figure~\ref{fig:f05ab})
+
+<<fig05a,include=TRUE>>=
+cplot(X,a.tot~fft.stat)
+@
+<<fig05b,include=TRUE>>=
+cplot(X,~a.tot)
+@
+
+\setkeys{Gin}{width=0.8\textwidth}
+\begin{figure}
+\begin{center}
+<<fig=TRUE,echo=FALSE,width=10,height=4>>=
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(1, 2)))
+print(
+<<fig05a>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(
+<<fig05b>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 2))
+@
+\caption{Left: Scatter plot of area (a.tot) vs non-circularity (fft.stat). Right: Histogram of cell area (a.tot).}
+\label{fig:f05ab}
+\end{center}
+\end{figure}
+
+Next, I will show a couple of useful examples. First of all we will plot the mean YFP fluorescence against time, differentiating the pheromone doses by color (Figure~\ref{fig:f06ab} left).
+
+<<fig06a,include=TRUE>>=
+cplotmean(X,f.total.y~t.frame,color=factor(AF.nM),yzoom=c(0,5.6e6))
+@
+
+The function \verb@cplotmean@ calculates the mean and standard error of the mean  for ``y'', at each level of the ``x''. Note that to assign a color to each level of \emph{AF.nM} we just have to assign this variable to the argument \verb@color@. The \verb@factor@ function is used to indicate that \emph{AF.nM} takes discrete levels and can be used to partition our data. By default \verb@cplotmean@ uses the entire range of the data for the plot. To zoom in a region you can use the \verb@yzoom@ and \verb@xzoom@ arguments as shown in the example. 
+
+We can also study the correlation between YFP, the pheromone reporter gene, and CFP, constitutive under the Act1 promoter (Figure~\ref{fig:f06ab} right). 
+
+<<fig06b,include=TRUE>>=
+cplot(X,f.tot.y~f.tot.c,color=factor(AF.nM),size=a.tot,alpha=0.5,subset=t.frame==13)
+@
+
+\setkeys{Gin}{width=1\textwidth}
+\begin{figure}
+\begin{center}
+<<fig=TRUE,echo=FALSE,width=12,height=5>>=
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(1, 2)))
+print(
+<<fig06a>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(
+<<fig06b>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 2))
+@
+\caption{Left: Mean YFP total fluorescence (f.total.y) vs time (t.frame) for different doses of pheromone (AF.nM). Right: Scatter plot of YFP vs CFP fluorescence, colored by AF.nM and size proportional to cell area.}
+\label{fig:f06ab}
+\end{center}
+\end{figure}
+
+Note that we mapped \verb@color@ to \emph{AF.nM} and \verb@size@ to \emph{a.tot}. We also use semi-transparency with \verb@alpha=0.5@ to avoid over-plotting. With the \verb@subset@ argument we select the last time frame.   
+
+For more details on \verb@cplot@ and other plotting functions read the vignette. 
+
+<<eval=FALSE,echo=TRUE>>=
+vignette('cplot')
+@
+
+\begin{thebibliography}{}
+
+\bibitem[Wickham (2009)]{wickham2009}
+Hadley Wickham.
+\newblock ggplot2: Elegant graphics for Data Analysis
+\newblock \emph{Springer} 2009
+
+\bibitem[Colman-Lerner et al. (2005)]{acl2005}
+Colman-Lerner, Gordon et al. (2005).
+\newblock Regulated cell-to-cell variation in a cell-fate decision system.
+\newblock \emph{Nature}, 437(7059):699-706.
+
+\bibitem[Chernomoretz et al. (2008)]{cpmcb2008}
+Chernomoretz, Bush et al. (2008).
+\newblock Using Cell-ID 1.4 with R for Microscope-Based Cytometry
+\newblock \emph{Curr Protoc Mol Biol.}, Chapter 14:Unit 14.18.
+
+\end{thebibliography}
+
+\end{document}

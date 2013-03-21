@@ -1,0 +1,252 @@
+
+\documentclass{article}
+
+\usepackage{url}
+\usepackage{natbib}
+\usepackage{graphics}
+\usepackage{amsmath}
+\usepackage{indentfirst}
+\usepackage[utf8]{inputenc}
+\usepackage{fullpage}
+
+% \VignetteIndexEntry{Display-cell-images}
+
+\begin{document}
+
+\SweaveOpts{eps = FALSE, pdf = TRUE}
+\SweaveOpts{prefix.string=fig/cimage}
+<<include=FALSE,echo=FALSE>>=
+  if(!file.exists("fig")) dir.create("fig")  
+@
+\setkeys{Gin}{width=1\textwidth}
+
+<<foo,include=FALSE,echo=FALSE>>=
+options(keep.source = TRUE, width = 100)
+foo <- packageDescription("Rcell")
+@
+
+\title{Layout cell images with Rcell (Version \Sexpr{foo$Version})}
+\author{Alan Bush}
+\maketitle
+
+\section{Introduction}
+
+\textbf{Rcell} uses the functions of \textbf{EBImage} package to manipulate and display the images processed by \textbf{Cell-ID}. The main purpose of the functions described in this document is to get a quick look at cells in different conditions, channels and times. \verb@cimage@ function crops images from single cells and displays them according to a user define arrangement. 
+
+If you haven't done so, read the ``Getting Started with Rcell'' document before proceeding.
+
+<<eval=FALSE,echo=TRUE>>=
+vignette('Rcell')
+@
+
+Make sure you have the \textbf{EBImage} package installed in your system. This package is quite hard to install, follow instructions from the VCell-ID-Rcell-Installation-Guide at \url{http://sourceforge.net/projects/cell-id/files/} or from \url{http://bioconductor.wustl.edu/bioc/html/EBImage.html}. To test if the package is working correctly try the following commands. A picture of Lena should be displayed.
+
+<<eval=FALSE,echo=TRUE>>=
+library(EBImage)
+example(display)
+@
+
+\section{Display cell images}
+
+If you haven't done so, load the \textbf{Rcell} package and the filtered example dataset with 
+
+<<echo=TRUE,eval=FALSE>>=
+library(Rcell) 
+data(ACL394filtered)
+@
+
+<<include=FALSE,echo=FALSE,eval=TRUE>>=
+library(Rcell)
+is.EBImage<-require(EBImage,quietly=TRUE)
+data(ACL394data)
+X$images$path<-factor(system.file('img', package='Rcell'))
+@
+
+When analyzing a dataset, you usually want to take a look at the cell's images that correspond to the data points. This helps to interpret the data and gives you confidence on the result. To visualize a random set of cells from a image, you have to specify position, channel and time frame (if you are dealing with a time course). For example, to visualize some BF images of cells from position 29 and time frame 11 use the following command\footnote{To save space, only some images of the example datatset were included in the package. Changing the \textit{subset} or the \textit{channel} arguments might result in errors if the specified images are not found.}. 
+
+<<img1,include=TRUE,eval=FALSE>>=
+cimage(X,subset=pos==29&t.frame==11,channel="BF")
+@
+
+This function displays the image shown in Figure~\ref{fig:img1}, and returns a \verb@Image@ object that can be saved to disk using the \verb@writeImage@ function. 
+
+<<include=FALSE,echo=FALSE,eval=TRUE>>=
+if(is.EBImage) 
+  writeImage(
+<<img1>>  
+  , 'fig/cimage-img1.jpg', quality=80)
+@
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=75pt]{fig/cimage-img1.jpg}
+\caption{BF images of random cells selected from position 29, t.frame 11}
+\label{fig:img1}
+\end{center}
+\end{figure}
+
+As all \textbf{Rcell} functions, the first argument of \verb@cimage@ is the \verb@cell.data@ object that you wish to visualize. This function first subsets the \verb@cell.data@ object X according to the \emph{subset} argument, as many other \textbf{Rcell} functions. This is useful to select cells and times, but you can't use this argument to select the channel you want to see. Instead you can use the \emph{channel} argument for this. Note that you can select several channels (see below). \verb@cimage@ then takes a random sample of cells from those selected by the \emph{subset} argument. The default sample size is seven, but you can specify it with the \emph{N} argument. If you set \emph{N} to NA, no sampling is applied and all selected cells are shown.
+The position each cell took in the image was arbitrary in Figure~\ref{fig:img1}, they were just tiled together to make a square arrangement. But position can have a meaning. A normal way to display cell images is to show a time course strips, where different channels are stacked one over the other. \verb@cimage@ can easily produce this kind of images (Figure~\ref{fig:img2}).
+
+<<img2,include=TRUE,eval=FALSE>>=
+cimage(X,channel~t.frame,subset=pos==29&cellID==5,channel=c("BF","YFP"))
+@
+
+<<include=FALSE,echo=FALSE,eval=TRUE>>=
+if(is.EBImage) 
+  writeImage(
+<<img2>>  
+  , 'fig/cimage-img2.jpg', quality=80)
+@
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{fig/cimage-img2.jpg}
+\caption{Time course strips for cell 5 of position 29}
+\label{fig:img2}
+\end{center}
+\end{figure}
+
+The second argument \verb@cimage@ is the \emph{formula} that specifies the position of individual images. The first term indicates the \verb@y@ variable, \emph{channel} in this example, so different channels will have different \verb@y@ coordinates. The right term specifies which variable is going to be used as the \verb@x@ coordinate, \emph{t.frame} in this case. In this example a single cell was explicitly selected with the \emph{subset} argument. When you select more than one cell per group\footnote{the groups are defined by the interaction (combinations) of the terms of the formula}, you have to specify how you want them to be layout on the image. To specify different cells within a sample you can use the \emph{cell}\footnote{note that \emph{cell} is different from \emph{cellID}. You can also use the alternative keywords \emph{sample} or thre dots(\dots)} keyword, as shown in Figure~\ref{fig:img3}.   
+ 
+<<img3,include=TRUE,eval=FALSE>>=
+cimage(X,cell+channel~t.frame,subset=pos==29,channel=c("BF","YFP"),N=4)
+@
+
+<<include=FALSE,echo=FALSE,eval=TRUE>>= 
+if(is.EBImage)
+  writeImage(
+<<img3>>  
+  , 'fig/cimage-img3.jpg', quality=80)
+@
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{fig/cimage-img3.jpg}
+\caption{Time course strips for 4 randomly chosen cells. The position and cellID of each cell are shown in the \emph{pos}.\emph{cellID} format.}
+\label{fig:img3}
+\end{center}
+\end{figure}
+
+Note that you can use more than one variable in each term of the formula, separated by the plus operator (\verb@+@). The order matters, the last variable to the right varies faster. In this example (Figure~\ref{fig:img3}) channel is anidated in each cell.
+
+The \emph{channel.subset} argument allows you to do complex selection of \emph{channel}s and \emph{t.frame}. For example you might be interested in the YFP channel, but would like to see the cell boundary found by Cell-ID on a BF image for a single time frame (Figure~\ref{fig:img4}).
+
+<<img4,include=TRUE,eval=FALSE>>=
+cimage(X,cell~channel+t.frame,subset=pos==29,N=4
+    ,channel.subset=channel=="YFP"|(channel=="BF.out"&t.frame==11))
+@
+ 
+<<include=FALSE,echo=FALSE,eval=TRUE>>= 
+if(is.EBImage)
+  writeImage(
+<<img4>>  
+  , 'fig/cimage-img4.jpg', quality=80)
+@
+
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{fig/cimage-img4.jpg}
+\caption{YFP time course strips for 4 randomly chosen cells, with a single BF image}
+\label{fig:img4}
+\end{center}
+\end{figure}
+
+You can select the ``out'' images generated by Cell-ID by appending ``.out'' to the channel name.
+
+\section{Faceting your image layout}
+
+In the same way as for \verb@cplot@, you can define \emph{facets} for the image layout. The facets are specified with formula notation, just as the positions of the images within a facet. If only one term of the formula is specified, the facets will be wrapped around the image to save space\footnote{In this case the \emph{facets.nx} argument can be used to define the number of facets columns} (Figure~\ref{fig:img5}). 
+
+<<img5,include=TRUE,eval=FALSE>>=
+cimage(X,cell~channel,facets=~pos,subset=t.frame==11&pos%in%c(1,8,15,22,29)
+              ,channel=c("YFP","BF"),N=3,facets.nx=5)
+@
+
+<<include=FALSE,echo=FALSE,eval=TRUE>>= 
+if(is.EBImage)
+  writeImage(
+<<img5>>  
+  , 'fig/cimage-img5.jpg', quality=80)
+@
+ 
+\begin{figure}
+\begin{center}
+\includegraphics[width=250pt]{fig/cimage-img5.jpg}
+\caption{sample against channel, faceted by position}
+\label{fig:img5}
+\end{center}
+\end{figure}
+
+\section{Image layout for continuous variables}
+
+An interesting plot can be obtained if we choose the position of the image according to a continuous variable. First suitable bins of the continuous variables have to be created, we can use the \verb@cut@ function for this.
+
+<<cut,include=TRUE>>=
+X<-transform(X,cut.fft.stat=cut(fft.stat,20))
+X<-transform(X,cut.f.tot.y=cut(f.tot.y,20))
+@
+
+Once these variables are created we can use them to arrange the images of the cells (Figure~\ref{fig:img6}).
+ 
+<<img6,include=TRUE,eval=FALSE>>=
+cimage(X,cut.f.tot.y~cut.fft.stat,facets=~channel,subset=t.frame==11 & pos %in% c(1,8,15,22,29)
+              ,channel=c("YFP","BF.out"),N=1)
+@
+
+<<include=FALSE,echo=FALSE,eval=TRUE>>=
+if(is.EBImage) 
+  writeImage(
+<<img6>>  
+  , 'fig/cimage-img6.jpg', quality=80)
+@
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=300pt]{fig/cimage-img6.jpg}
+\caption{f.tot.y vs fft.stat, faceted by channel}
+\label{fig:img6}
+\end{center}
+\end{figure}
+  
+You can compare the image layout with a scatter plot side by side. This can hep you interpret the scatter plot (Figure~\ref{fig:f07}). 
+
+<<fig07,include=TRUE>>=
+cplot(X,f.tot.y~fft.stat,subset=t.frame==11 & pos %in% c(1,8,15,22,29)) 
+@  
+
+\setkeys{Gin}{width=0.5\textwidth}
+\SweaveOpts{png = FALSE, pdf = TRUE}
+\begin{figure}
+\begin{center}
+<<fig=TRUE,echo=FALSE,width=4.5,height=4.5>>=
+<<fig07>>
+@
+\caption{Scatter plot to be compared to the image layouts of Figure~\ref{fig:img6}}
+\label{fig:f07}
+\end{center}
+\end{figure}
+
+
+
+\begin{thebibliography}{}
+
+\bibitem[Pau et al. (2010)]{pau2010}
+Pau, Fuchs et al. (2010).
+\newblock EBImage: an R package for image processing with applications to cellular phenotypes.
+\newblock \emph{Bioinformatics}, 26(7):979-981.
+
+\bibitem[Colman-Lerner et al. (2005)]{acl2005}
+Colman-Lerner, Gordon et al. (2005).
+\newblock Regulated cell-to-cell variation in a cell-fate decision system.
+\newblock \emph{Nature}, 437(7059):699-706.
+
+\bibitem[Chernomoretz et al. (2008)]{cpmcb2008}
+Chernomoretz, Bush et al. (2008).
+\newblock Using Cell-ID 1.4 with R for Microscope-Based Cytometry.
+\newblock \emph{Curr Protoc Mol Biol.}, Chapter 14:Unit 14.18.
+
+\end{thebibliography}
+
+\end{document}

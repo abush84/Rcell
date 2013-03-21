@@ -1,0 +1,359 @@
+\documentclass{article}
+
+\usepackage{url}
+\usepackage{natbib}
+\usepackage{graphics}
+\usepackage{amsmath}
+\usepackage{indentfirst}
+\usepackage[utf8]{inputenc}
+\usepackage{fullpage}
+% \VignetteIndexEntry{Plotting-with-Rcell}
+
+\begin{document}
+
+\SweaveOpts{png = FALSE, pdf = TRUE, resolution = 72}
+\DeclareGraphicsExtensions{.pdf, .png}
+
+\SweaveOpts{prefix.string=fig/cplot}
+<<include=FALSE,echo=FALSE>>=
+  if(!file.exists("fig")) dir.create("fig")  
+@
+\setkeys{Gin}{width=1\textwidth}
+
+<<foo,include=FALSE,echo=FALSE>>=
+options(keep.source = TRUE, width = 100)
+foo <- packageDescription("Rcell")
+@
+
+\title{Plotting with Rcell (Version \Sexpr{foo$Version})}
+\author{Alan Bush}
+\maketitle
+
+\section{Introduction}
+
+\textbf{Rcell} uses the functions of the \textbf{ggplots2} package to create the plots. This package created by Wickham implements the ideas of Wilkinson (2005) of a ``grammar of graphics'', i.e. a formal description of statistical graphics. I recommend to read the book on the ggplot2 package. If you are already familiar with this package you can skip this document and read the help on \verb@cplot@. \textbf{Rcell} plotting functions return objects of class \verb@ggplot@, and therefore can be combined with other functions of the \textbf{ggplot2} package in a transparent manner. 
+In this document I will present and explain different plots that can be made with the \textbf{Rcell} plotting functions. If you haven't done so, read the ``Getting Started with Rcell'' vignette before proceeding. 
+
+<<eval=FALSE,echo=TRUE>>=
+vignette('Rcell')
+@
+
+\section{A Grammar of Graphics}
+
+There exist an enormous variety of statistical plots, as a few example we can mention scatter plots, bar plots, histograms, piecharts, box plots, etc. The grammar of graphics attempts to describe all these different plots in a simple, coherent language. It defines the following elements to describe a plot:
+\begin{description}
+\item[\textit{data:}] the dataset to be plotted 
+\item[\textit{geom:}] the geometrical object used to represent the data (e.g. points, bars, lines, etc)
+\item[\textit{aesthetic mapping:}] defines what variable of the dataset will be mapped to each aesthetic attribute of the geometrical object
+\item[\textit{stat:}] statistical transformations to be performed before plotting (e.g. calculate mean, bin the data for a histogram, etc)
+\item[\textit{position:}] minnor position adjustments of the geoms
+\item[\textit{scale:}] defines the scale for the mapping between a variable and a aesthetic attribute (e.g. lineal, log)
+\item[\textit{coordinate:}] the coordinate system to be used. This is normally cartesian coordinates, but can also be polar coordinates for example.
+\item[\textit{faceting:}] describes how the plot should be divided into a series of subplots.
+\end{description}
+
+\textbf{ggplot2} implements a ``layered grammar of graphics'', meaning that several layers containing the mentioned elements can be added to a plot. 
+In the following sections I will try to make this clear by a series of explained examples.
+
+\section{Scatter Plots}
+If you haven't done so, load the \textbf{Rcell} package and the example dataset with 
+
+<<eval=FALSE,echo=TRUE>>=
+library(Rcell) 
+data(ACL394filtered)
+@
+
+<<include=FALSE,echo=FALSE,eval=TRUE>>=
+library(Rcell)
+data(ACL394data)
+X$images$path<-factor(system.file('img', package='Rcell'))
+@
+
+You can create a scatter plot of YFP vs CFP total fluorescence (Figure~\ref{fig:f01} left) by typing
+
+<<fig01a,include=TRUE>>=
+cplot(X,x=f.tot.y,y=f.tot.c,subset=t.frame==13)
+@
+
+The first argument of the \verb@cplot@ function is the \verb@cell.data@ object, i.e. the \emph{data} element of the plot. The second and third argument specify the \emph{aesthetic mapping}; \emph{f.tot.y} variable of the dataset should be mapped to the \emph{x} position aesthetic, and \emph{f.tot.c} to the \emph{y} position aesthetic (the \verb@subset@ argument just indicates we don't want to plot the entire dataset, just some registers). As you can see not all elements of the grammar where specified. The ones that are not are set to default values. For example \emph{geom} is set to \verb@"point"@, meaning that a point is going to be used to represent the data. The aesthetic attributes available depend on the selected \emph{geom}. For example a point \emph{geom} has \emph{x}, \emph{y}, \emph{size}, \emph{shape}, \emph{color}, \emph{fill} and \emph{alpha} (transparency). To see all aesthetic attributes and default values of the available \emph{geom} go to \url{http://had.co.nz/ggplot2}. There are many attributes that can be mapped to variables, therefore increasing the amount of information a plot contains. You can specify the \emph{aesthetic mapping} of these attributes as we did before.
+
+<<fig01b,include=TRUE>>=
+cplot(X,x=f.tot.y,y=f.tot.c,size=a.tot,color=factor(AF.nM),shape=factor(AF.nM),alpha=0.5,subset=t.frame==13)
+@
+     
+We have mapped the \emph{size} aesthetic to the \textit{a.tot} variable, and the \emph{color} and \emph{shape} aesthetics to the \textit{AF.nM} variable (Figure~\ref{fig:f01} right). This mapping redundancy can be useful to present the data to color blind persons or if the plot is going to be presented in a black and white device (e.g. paper). The use of the \verb@factor@ function for \textit{AF.nM} forces the use of discrete scales. Note that the \emph{alpha} (transparency) aesthetic has been mapped to a constat value and not a variable. Making objects semi-transparents can reduce over-plotting.
+
+\SweaveOpts{png = FALSE, pdf = TRUE}
+\begin{figure}
+\begin{center}
+<<fig=TRUE,echo=FALSE,width=9,height=4.5>>=
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(1, 20)))
+print(
+<<fig01a>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:9))
+print(
+<<fig01b>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 10:20))
+@
+\caption{Left: Scatter plot of total CFP (f.tot.c) vs YFP (f.tot.y) fluorescence. Right: same plot with shape and color mapped to treatment (AF.nM), and size mapped to cell area (a.tot).}
+\label{fig:f01}
+\end{center}
+\end{figure}
+
+  
+\section{Time Courses and Over-plotting}        
+
+A time course plot is basically a scatter plot in which the \emph{x} axis is time. To get a time course of YFP fluorescence (Figure~\ref{fig:f02} left) type in
+
+<<fig02a,include=TRUE>>=
+cplot(X,x=t.frame,y=f.tot.y,subset=AF.nM==20)
+@
+
+The same plot can be obtained using a formula notation of the form \verb@y~x@ as the second argument in the call. When using this notation you can use the generic function \verb@plot@ instead of \verb@cplot@. The next two lines result in the same plot (Figure~\ref{fig:f02} left).
+ 
+<<eval=FALSE,echo=TRUE>>=
+cplot(X ,f.tot.y ~ t.frame, subset = AF.nM == 20)
+plot(X, f.tot.y ~ t.frame, subset = AF.nM == 20)
+@
+
+You can see that the \textit{t.frame} variable takes discrete levels, thus causing overplotting; too many points fall in the same region and you can no longer estimate the density (Figure~\ref{fig:f02} left). The plot is ``saturated''. There are several strategies to avoid overplotting, for example one could reduce the \emph{size} of the \emph{geom} and use \emph{alpha} blending. Another strategy is to use the \emph{position} adjustment. By default this is set to \verb@"identity"@, meaning that the points fall where the data says so. If you change this to \verb@"jitter"@, the points are jittered (a small white noise is added to the \emph{x} position) to avoid overplotting (Figure~\ref{fig:f02} right). 
+
+<<fig02b,include=TRUE>>=
+cplot(X,f.tot.y~t.frame,size=1,alpha=0.3,position="jitter",subset=AF.nM==20)
+@
+
+\SweaveOpts{png = TRUE, pdf = FALSE}
+\begin{figure}
+\begin{center}
+<<fig=TRUE,echo=FALSE,width=9,height=4.5>>=
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(1, 20)))
+print(
+<<fig02a>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:10))
+print(
+<<fig02b>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 11:20))
+@
+\caption{Left: Time course of YFP fluorescence (f.tot.y) for the 20nM dose. Right: same plot with smaller, semitransparent and jittered points to reduce over-plotting.}
+\label{fig:f02}
+\end{center}
+\end{figure}
+
+\section{Statistical Transformations}        
+ 
+Another way to avoid overplotting is by using other statistical plots, for example a box and whisker plot (Figure~\ref{fig:f03} left). 
+
+<<fig03a,include=TRUE>>=
+cplot(X,f.tot.y~t.frame,group=t.frame,geom="boxplot",subset=AF.nM==20)
+@
+
+Setting the \emph{geom} to \verb@"boxplot"@ creates the desired plot. If you think the steps required to produce this plot, you will realize that some preprocessing of the data has to occur before the plot is actually done. For instance the 25\%, 50\% and 75\% quantiles have to be calculated for each group (defined by the \emph{group} argument). This means that a ``statistical transformation'' (\emph{stat}) of the data has to be done. The \emph{stat} that does this calculation is called \verb@"boxplot"@. When we selected the \verb@"boxplot"@ \emph{geom}, the \emph{stat} was set by default to \verb@"boxplot"@. Every \emph{geom} has a default \emph{stat}. For example \emph{geom} \verb@"point"@ has the default \emph{stat} \verb@"identity"@ that does no transformation to the data, exactly what we need to do scatter plots. 
+
+Another way to show this data is to plot the mean and a confidence interval for the mean, for each time. We can do this selecting \emph{stat} \verb@"summary"@ and specifying which function is to be used to calculate the summary statistics by the \verb@fun.data@ argument. We have to use several \emph{geom}s to show all this information.
+
+<<eval=FALSE,echo=TRUE>>=
+cplot(X, f.tot.y ~ t.frame, subset = AF.nM == 20, stat = "summary", fun.data = "mean_cl_normal", geom=c("point","errorbar","line"))
+@
+
+Because plotting the mean is a fairly common thing to do, \textbf{Rcell} provides the convenience function \verb@cplotmean@ that sets  \emph{stat} to \verb@"summary"@ and \verb@fun.data@ to \verb@"mean_cl_normal"@. The same plot (Figure~\ref{fig:f03} right) can be done with
+ 
+<<fig03b,include=TRUE>>=
+cplotmean(X,f.tot.y~t.frame,subset=AF.nM==20)
+@
+
+Note that the plotting range used for this plot is the data range. You probably want to zoom-in the \emph{y} axis to show only the range of the means. To do this you can use the \verb@yzoom@ argument, for example \verb@yzoom=c(0,6e6)@. The \verb@ylim@ argument is also available, but it filters the data BEFORE the statistical transformation, thus the calculated mean will depended on the plotting range! A warning is issued if you use \verb@ylim@ in a call to \verb@cplotmean@.
+
+\SweaveOpts{png = FALSE, pdf = TRUE}
+\begin{figure}
+\begin{center}
+<<fig=TRUE,echo=FALSE,width=9,height=4.5>>=
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(1, 20)))
+print(
+<<fig03a>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:10))
+print(
+<<fig03b>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 11:20))
+@
+\caption{Left: box-whisker plot for the time course data of f.tot.y. Right: means and 95\% confidence intervals of the mean for the same data.}
+\label{fig:f03}
+\end{center}
+\end{figure}
+
+
+\section{Adding Layers to a Plot}        
+
+Many times plots with several layers are required. For example we may want to add a layer with the mean and confidence interval for the mean, to a scatter plot. To create such a multilayer plot we first create a plot and, instead of displaying it, we assign it to a variable \footnote{The plotting functions return a object of class \textbf{\texttt{ggplot}}}.
+<<>>=
+p <- cplot(X,f.tot.y~t.frame,size=1,alpha=0.3,position="jitter",subset=AF.nM==20)
+@
+
+We can then add a layer with the mean using the \verb@clayermean@ function (Figure~\ref{fig:f04} left).
+
+<<fig04a,include=TRUE>>=
+p + clayermean(color="red")
+@
+
+When used with no \verb@cell.data@ or mapping arguments, the added layer uses the same \emph{data} and \emph{aesthetic mapping} as the plot to which it is being added. You can specify the layer to use another dataset or aesthetic mapping by passing arguments to \verb@clayermean@. The default geom for the layer can also be changed, for example to the \verb@"smooth"@ \emph{geom} (Figure~\ref{fig:f04} right).
+ 
+<<fig04b,include=TRUE>>=
+p + clayermean(geom="smooth")
+@
+
+\SweaveOpts{png = TRUE, pdf = FALSE}
+\begin{figure}
+\begin{center}
+<<fig=TRUE,echo=FALSE,width=9,height=4.5>>=
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(1, 20)))
+print(
+<<fig04a>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:10))
+print(
+<<fig04b>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 11:20))
+@
+\caption{Left: means and confidence intervals layer added to the scatter plot. Right: Using the ``smooth'' geom to represent the mean and CI.}
+\label{fig:f04}
+\end{center}
+\end{figure}
+
+ 
+Only layers can be added to plots, you can't add plots to plots nor layers to layers. Create the layers with \verb@clayer@ and \verb@clayermean@. 
+ 
+\section{Faceting Plots}     
+
+Faceting creates many subplots showing different subsets of the data. You can facet a plot by providing a \emph{facets} argument. This argument should be a formula. If only the right term is provided (\verb@~myVar@) then a one dimensional strip of subplots is created and then ``wrapped'' into 2D to save space. An example is shown in Figure~\ref{fig:f5a}. If you provide both terms to the \emph{facets} formula, a grid of subplots is created.
+
+<<fig05a,include=TRUE>>=
+cplot(X,f.tot.y~t.frame,facets=~pos,geom="smooth",subset=pos%in%c(1,8,15,22,29),yzoom=c(0,6e6))
+@
+
+\SweaveOpts{png = FALSE, pdf = TRUE}
+\begin{figure}
+\begin{center}
+<<fig=TRUE,echo=FALSE,width=9,height=6>>=
+print(
+<<fig05a>>
+)
+@
+\caption{YFP vs time, facetted by pos (one position of each dose was selected).}
+\label{fig:f5a}
+\end{center}
+\end{figure}
+ 
+\section{Histograms}     
+
+Histograms are automatically created if you specify the \emph{x}, but not the \emph{y} aesthetic to \verb@cplot@ (Figure~\ref{fig:f06} left). This sets \emph{stat} to \verb@"bin"@ and \emph{geom} to \verb@"bar"@.
+
+<<fig06a,include=TRUE>>=
+cplot(X,~f.tot.y,subset=t.frame==13)
+@  
+
+As with other plots, you can map other aesthetics to variables. In \emph{geom} \verb@"bar"@ the \emph{color} aesthetic refers to the border of the bar. The \emph{fill} aesthetic specifies the filling color (Figure~\ref{fig:f06} right).  
+
+<<fig06b,include=TRUE>>=
+cplot(X,~f.tot.y,subset=t.frame==13,fill=factor(AF.nM))
+@  
+
+\SweaveOpts{png = FALSE, pdf = TRUE}
+\begin{figure}
+\begin{center}
+<<fig=TRUE,echo=FALSE,width=9,height=4.5>>=
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(1, 20)))
+print(
+<<fig06a>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:9))
+print(
+<<fig06b>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 10:20))
+@
+\caption{Left: histogram for total YFP fluorescence. Right: Same histogram, with fill aesthetic mapped to pheromone dose (AF.nM)}
+\label{fig:f06}
+\end{center}
+\end{figure}
+ 
+
+Note that we transformed the numerical variable AF.nM to a factor. This was done because the color scale applied to factors makes it easier to differentiate between levels of the variable. You can see that the title of the legend contains is \verb@"factor(AF.nM)"@. To avoid the inclusion of ``factor'' in this legend you can use the \emph{as.factor} argument (see next example). 
+When specifying the filling color, the \emph{position} adjustment is set to \verb@"stack"@, which means that bars of different colors are stacked one over the other (the outline of the histogram doesn't change). This behavior can be changed by using other \emph{position} adjustments, for example \verb@"dodge"@ and \verb@"fill"@ are shown in Figure~\ref{fig:f07}, left and right respectively.
+  
+\SweaveOpts{png = FALSE, pdf = TRUE}
+\begin{figure}
+\begin{center}
+<<fig=TRUE,echo=FALSE,width=9,height=4.5>>=
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(1, 20)))
+print(
+cplot(X,~f.tot.y,subset=t.frame==13,fill=AF.nM,position="dodge",as.factor="AF.nM")
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:10))
+print(
+cplot(X,~f.tot.y,subset=t.frame==13,fill=AF.nM,position="fill",as.factor="AF.nM")
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 11:20))
+@
+\caption{Left: histogram for total YFP fluorescence, using position ``dodge''. Right: Same histogram, with position ``fill''}
+\label{fig:f07}
+\end{center}
+\end{figure}
+ 
+If you use \emph{position} \verb@"identity"@ the histograms are plotted one over an other, so you will probably just see the last one to be plotted. You can avoid this by using \emph{geom} \verb@"step"@ (Figure~\ref{fig:f08} left). If you do so you have to specify the \emph{stat} to \verb@"bin"@ as this is not the default. 
+
+<<fig08a,include=TRUE>>=
+cplot(X,x=f.tot.y,subset=t.frame==7,color=AF.nM,as.factor="AF.nM",geom="step",stat="bin") 
+@  
+
+A smoothed version of this plot is obtained with a density plot, as shown in Figure~\ref{fig:f08} right.
+
+<<fig08b,include=TRUE>>=
+cplot(X,x=f.tot.y,subset=t.frame==7,geom="density",color=factor(AF.nM),yzoom=c(0,1e-6)) 
+@  
+
+\SweaveOpts{png = FALSE, pdf = TRUE}
+\begin{figure}
+\begin{center}
+<<fig=TRUE,echo=FALSE,width=9,height=4.5>>=
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(1, 20)))
+print(
+<<fig08a>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:10))
+print(
+<<fig08b>>
+, vp = viewport(layout.pos.row = 1, layout.pos.col = 11:20))
+@
+\caption{Left: histogram for total YFP fluorescence, using geom ``step'' and stat ``bin''. Right: Same histogram, with geom ``density''}
+\label{fig:f08}
+\end{center}
+\end{figure}
+
+%ToDo: section{annotating your plot} 
+
+\begin{thebibliography}{}
+
+\bibitem[Wilkinson (2005)]{wilkinson}
+Leland Wilkinson
+\newblock The Grammar of Graphics
+\newblock \emph{Statistics and Computation. Springer}, 2005 
+
+\bibitem[Wickham (2009)]{wickham}
+Hadley Wickham.
+\newblock ggplot2: Elegant graphics for Data Analysis
+\newblock \emph{Springer} 2009
+
+\bibitem[Colman-Lerner et al. (2005)]{acl2005}
+Colman-Lerner, Gordon et al. (2005).
+\newblock Regulated cell-to-cell variation in a cell-fate decision system.
+\newblock \emph{Nature}, 437(7059):699-706.
+
+\bibitem[Chernomoretz et al. (2008)]{cpmcb2008}
+Chernomoretz, Bush et al. (2008).
+\newblock Using Cell-ID 1.4 with R for Microscope-Based Cytometry
+\newblock \emph{Curr Protoc Mol Biol.}, Chapter 14:Unit 14.18.
+
+
+\end{thebibliography}
+
+\end{document}

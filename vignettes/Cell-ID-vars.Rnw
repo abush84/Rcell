@@ -1,0 +1,150 @@
+
+\documentclass{article}
+
+\usepackage{url}
+\usepackage{natbib}
+\usepackage{graphics}
+\usepackage{amsmath}
+\usepackage{indentfirst}
+\usepackage[utf8]{inputenc}
+\usepackage{fullpage}
+
+% \VignetteIndexEntry{Cell-ID-variables}
+
+\begin{document}
+
+\title{Cell-ID variables (Version 1.4.6)}
+\author{Alan Bush}
+\maketitle
+
+
+
+% latex table generated in R 2.13.2 by xtable 1.6-0 package
+% Mon Dec 05 14:01:12 2011
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{p{2.5cm}p{12cm}}
+  \hline
+Variable & Description \\ 
+  \hline
+pos & Position number (i.e., id of image field); same for a single cell through every set of images of a time course. This variable is created by Rcell when the dataset is loaded. \\ 
+cellID & Cell identification number. (In FRET split image experiments the cells in the upper and lower part of the split image are differentiated by an offset of 1000 added to this value.) \\ 
+ucid & Unique cell id. A variable that identifies cells across different positions; defined as pos*offset+cellID, where offset is 100000. This variable is created by Rcell when the dataset is loaded. \\ 
+t.frame & Time frame of the cell (0 through n - 1 where n is the number of points in the time course). Not every cell is necessarily found in every time point. \\ 
+time & Time of that time frame in seconds. The time unit is an absolute number of seconds from some time in the distance past, but the time elapsed between time frames is more meaningful (only meaningful if using Metamorph images). \\
+   \hline
+\end{tabular}
+\caption{ID variables}
+\label{tab:t01}
+\end{center}
+\end{table}
+
+
+
+
+
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{p{2.5cm}p{12cm}}
+  \hline
+Variable & Description \\ 
+  \hline
+xpos & x coordinate of the centroid of the cell \\ 
+ypos & y coordinate of the centroid of the cell \\ 
+fft.stat & Statistic derived from the one-dimensional fast-Fourier-transform (FFT) of the function: radius vs. angle, where the radius is the distance from the cell centroid to the boundary at a given angle. Its value is the root of the squared sum of the ratio FFT(w)/FFT(0) over all w$>$0; for a perfect circle fft.stat is 0, and we interpret this statistic as a measure of non-circularity. \\ 
+perim & Circumference of the cell in pixel units \\ 
+maj.axis & Length of the major axis in pixel units \\ 
+min.axis & Length of the minor in pixel units \\ 
+rot.vol & Volume of rotation of the cell around its major axis \\ 
+con.vol & Volume of the cell as determined by the conical volume method (Gordon et al., 2007) \\ 
+a.surf & Surface area as calculated by the union of spheres method (Gordon et al., 2007) \\ 
+sphere.vol & Volume a measured by the union of spheres method (Gordon et al., 2007) \\ 
+   \hline
+\end{tabular}
+\caption{Morphological variables}
+\label{tab:t02}
+\end{center}
+\end{table}
+
+
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{p{2.5cm}p{12cm}}
+  \hline
+Variable & Description \\ 
+  \hline
+f.tot & Sum of the fluorescence image for all the pixels found in that cell \\ 
+a.tot & Area of the cell in pixels \\ 
+a.vacuole & Vacuole area calculated from the region inside the cell that is less brightly fluorescent. In exponentially growing cells expressing fluorescence localized to the cytoplasm, this dark region corresponds to the vacuole. \\ 
+f.vacuole & Vacuole fluorescence calculated from the region inside the cell that is less brightly fluorescent. In exponentially growing cells expressing fluorescence localized to the cytoplasm, this dark region corresponds to the vacuole. \\ 
+f.tot.p1 & Fluorescence of all the pixels interior to the boundary that is one pixel wider than the cell boundary. Numbers thus include the original cell plus an annular region one pixel around the outside of the cell. \\ 
+a.tot.p1 & Area of all the pixels interior to the boundary that is one pixel wider than the cell boundary. Numbers thus include the original cell plus an annular region one pixel around the outside of the cell. \\ 
+f.tot.m1 & Fluorescence of all pixels interior to the boundary that is one pixel smaller than the cell boundary \\ 
+a.tot.m1 & Area of all pixels interior to the boundary that is one pixel smaller than the cell boundary \\ 
+f.tot.m2 & Fluorescence of all pixels interior to the boundary that is two pixels smaller than the cell boundary \\ 
+a.tot.m2 & Area of all pixels interior to the boundary that is two pixels smaller than the cell boundary \\ 
+f.tot.m3 & Fluorescence of all pixels interior to the boundary that is three pixels smaller than the cell boundary \\ 
+a.tot.m3 & Area of all pixels interior to the boundary that is three pixels smaller than the cell boundary \\ 
+   \hline
+\end{tabular}
+\caption{Fluorescence and area variables}
+\label{tab:t03}
+\end{center}
+\end{table}
+
+
+
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{p{2.5cm}p{12cm}}
+  \hline
+Variable & Description \\ 
+  \hline
+f.nucl & Total fluorescence in the found nucleus. To find the nucleus, Cell-ID moves a disc with a radius of two pixels around the interior of the cell and finds the location where the disc has the maximum total fluorescence. From that location it calculates the fluorescence within a circle of four pixels of radius. This process is done for every fluorescence image. If some pixels of the disc fall outside the cell boundary, they are not used in the quantification. \\ 
+a.nucl & Area of the found nucleus \\ 
+f.nucl1 to 6 & Same as f.nucl, but using a disc of increasing radius to calculate the fluorescence for each image. f.nucl1 uses a disc of 2 pixels of radius, f.nucl2 uses a disc of 3 pixels, and so forth up to f.nucl6 which uses a disc of 7 pixels of radius. \\ 
+a.nucl1 to 6 & The area corresponding to f.nucl1 to f.nucl6 \\ 
+f.nucl.tag1 to 6 & Same as f.nucl1 to f.nucl6, but the fluorescence is calculated from the nuclear tagged fluorescent channel, specified in step 15b. If no nuclear channel is specified, these variables are equal to f.nucl1 to 6. \\ 
+   \hline
+\end{tabular}
+\caption{Nuclear variables}
+\label{tab:t04}
+\end{center}
+\end{table}
+
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{p{2cm}p{12cm}}
+  \hline
+Variable & Description \\ 
+  \hline
+f.bg & Fluorescence background level; the mode of the distribution of all fluorescence pixels not associated with any cell \\ 
+f.local.bg & Measure of the background level at pixels located 5 radial pixels further out than the cell boundary; thus, a measure of the local fluorescence background level, the average fluorescence per pixel. Only pixels along the annular boundary NOT associated with ANY cell are included; background level here is the mean of the pixels. \\ 
+a.local.bg & The number of pixels used in the background calculation for local.bg \\ 
+a.local & Total number of pixels along the annular region, including all pixels (i.e., pixels associated with cells and pixels not associated with any cell) \\ 
+f.local2.bg & Same as f.local.bg, but using the background level at pixels located x radial pixels outward of the cell boundary, where x is one half of the minor axis of the cell.\\
+a.local2.bg & Same as a.local.bg, but using the background level at pixels located x radial pixels outward of the cell boundary, where x is one half of the minor axis of the cell.\\
+a.local2 & Same as a.local, but using the background level at pixels located x radial pixels outward of the cell boundary, where x is one half of the minor axis of the cell.\\
+   \hline
+\end{tabular}
+\caption{Background variables}
+\label{tab:t05}
+\end{center}
+\end{table}
+
+
+\begin{thebibliography}{}
+
+\bibitem[Chernomoretz et al. (2008)]{cpmcb2008}
+Chernomoretz, Bush et al. (2008).
+\newblock Using Cell-ID 1.4 with R for Microscope-Based Cytometry.
+\newblock \emph{Curr Protoc Mol Biol.}, Chapter 14:Unit 14.18.
+
+\bibitem[Gordon et al. (2007)]{cellid2007}
+Gordon, Colman-Lerner et al. (2007).
+\newblock Single-cell quantification of molecules and rates using open-source microscope-based cytometry.
+\newblock \emph{Nat. Methods }, 4:175-181
+
+\end{thebibliography}
+
+\end{document}
